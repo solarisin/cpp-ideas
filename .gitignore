@@ -1,0 +1,4 @@
+.vcpkg/installed/
+.vcpkg/in
+out/
+.vscode/

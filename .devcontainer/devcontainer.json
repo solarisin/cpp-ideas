@@ -1,0 +1,105 @@
+{
+  "name": "C++ Development Environment",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "mounts": [
+    {
+      "source": "C:/code/.vcpkg/bincache/x64-linux-clang",
+      "target": "/bincache",
+      "type": "bind"
+    },
+    {
+      "source": "C:/code/.vcpkg/assetcache",
+      "target": "/assetcache",
+      "type": "bind"
+    },
+    {
+      "source": "C:/code/.ccache/ccache",
+      "target": "/ccache",
+      "type": "bind"
+    }
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "upgradePackages": true,
+      "installOhMyZsh": false,
+      "installOhMyZshConfig": false
+    },
+    "ghcr.io/devcontainers-extra/features/cmake": {
+      "version": "latest",
+      "cmakeVersion": "3.31.7",
+      "cmakeGenerator": "Ninja"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers-extra/features/neovim-apt-get:1": {},
+    "ghcr.io/eitsupi/devcontainer-features/jq-likes:2.1.1": {
+        "jqVersion": "latest",
+        "yqVersion": "latest"
+    },
+    "ghcr.io/devcontainers-community/features/direnv": {},
+    "ghcr.io/devcontainers-community/features/llvm": {},
+    "ghcr.io/devcontainer-community/devcontainer-features/starship.rs:1": {},
+    "ghcr.io/devcontainer-community/devcontainer-features/btop:1": {},
+    "ghcr.io/devcontainers-extra/features/fd:1": {},
+    "ghcr.io/devcontainers-extra/features/ripgrep:1": {}
+  },
+
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined",
+    "--shm-size=2gb"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-themes",
+        "jeff-hykin.better-cpp-syntax",
+        "ms-vscode.makefile-tools",
+        "TheQtCompany.qt-core",
+        "TheQtCompany.qt-cpp",
+        "TheQtCompany.qt-qml",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "github.vscode-github-actions",
+        "GitHub.vscode-pull-request-github",
+        "ms-vscode.makefile-tools",
+        "eamodio.gitlens",
+        "isudox.vscode-jetbrains-keybindings"
+      ],
+      "settings": {
+        "C_Cpp.default": {
+          "configurationProvider": "ms-vscode.cmake-tools",
+          "cppStandard": "c++23",
+          "cStandard": "c17",
+          "compilerPath": "/usr/bin/clang++"
+        },
+        "cmake": {
+          "configureOnOpen": false,
+          "buildDirectory": "${workspaceFolder}/build",
+          "configureArgs": [
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          ],
+          "preferredGenerators": [
+            "Ninja",
+            "Unix Makefiles"
+          ]
+        }
+      }
+    }
+  },
+  "containerEnv": {
+  },
+  "remoteUser": "vscode",
+  "initializeCommand": "python3 ./.devcontainer/scripts/initialize.py",
+  "postCreateCommand": ".devcontainer/scripts/post_create.sh"
+}

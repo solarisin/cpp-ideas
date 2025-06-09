@@ -1,0 +1,29 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "linux-x64-debug",
+            "displayName": "",
+            "description": "",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "environment": {
+                "VCPKG_DEFAULT_BINARY_CACHE": "/bincache",
+                "X_VCPKG_ASSET_SOURCES": "clear;x-azurl,file:///assetcache,,readwrite",
+                "CC": "/usr/lib/ccache/clang",
+                "CXX": "/usr/lib/ccache/clang++"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "VCPKG_TARGET_TRIPLET": "x64-linux",
+                "VCPKG_MANIFEST_DIR": "${sourceDir}/.vcpkg",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/.vcpkg/installed",
+                "VCPKG_MANIFEST_INSTALL": "ON"
+            }
+        }
+    ]
+}
