@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 
 # Find testing framework
 find_package(Catch2 3 QUIET)
@@ -28,7 +28,7 @@ target_link_libraries(tests
         Catch2::Catch2WithMain
         fmt::fmt
         nlohmann_json::nlohmann_json
-        Qt5::Core
+        Qt::Core
 )
 
 # Include test discovery

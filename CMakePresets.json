@@ -6,7 +6,8 @@
             "displayName": "",
             "description": "",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "binaryDir": "${sourceDir}/build/",
+            "installDir": "${sourceDir}/install",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "environment": {
                 "VCPKG_DEFAULT_BINARY_CACHE": "/bincache",
@@ -16,7 +17,7 @@
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache",
                 "VCPKG_TARGET_TRIPLET": "x64-linux",

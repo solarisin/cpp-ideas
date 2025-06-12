@@ -4,6 +4,7 @@
 #include <fmt/ranges.h>
 #include <vector>
 #include <map>
+#include <chrono>
 
 int main()
 {
@@ -52,7 +53,7 @@ int main()
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     
     fmt::print("   Formatted 10,000 strings in {} microseconds\n", duration.count());
-    fmt::print("   That's {:.2f} strings per microsecond!\n", 10000.0 / duration.count());
+    fmt::print("   That's {:.2f} strings per microsecond!\n", 10000.0 / static_cast<float>(duration.count()));
 
     return 0;
 }

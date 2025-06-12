@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 
 # Simple example demonstrating fmt usage
 add_executable(fmt_example
@@ -28,8 +28,8 @@ add_executable(qt_example
 
 target_link_libraries(qt_example
     PRIVATE
-        Qt5::Core
-        Qt5::Widgets
+        Qt::Core
+        Qt::Widgets
         fmt::fmt
 )
 

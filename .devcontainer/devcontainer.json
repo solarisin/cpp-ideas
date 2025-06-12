@@ -3,21 +3,37 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "remoteUser": "vscode",
   "mounts": [
     {
-      "source": "C:/code/.vcpkg/bincache/x64-linux-clang",
+      "source": "cpp-ideas-bincache",
       "target": "/bincache",
-      "type": "bind"
+      "type": "volume"
     },
     {
-      "source": "C:/code/.vcpkg/assetcache",
+      "source": "cpp-ideas-assetcache",
       "target": "/assetcache",
-      "type": "bind"
+      "type": "volume"
     },
     {
-      "source": "C:/code/.ccache/ccache",
+      "source": "cpp-ideas-ccache",
       "target": "/ccache",
-      "type": "bind"
+      "type": "volume"
+    },
+    {
+      "source": "cpp-ideas-bashhistory",
+      "target": "/commandhistory",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-build",
+      "target": "${containerWorkspaceFolder}/build",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-vcpkg-installed",
+      "target": "${containerWorkspaceFolder}/.vcpkg/installed",
+      "type": "volume"
     }
   ],
   "features": {
@@ -27,11 +43,7 @@
       "installOhMyZsh": false,
       "installOhMyZshConfig": false
     },
-    "ghcr.io/devcontainers-extra/features/cmake": {
-      "version": "latest",
-      "cmakeVersion": "3.31.7",
-      "cmakeGenerator": "Ninja"
-    },
+    "ghcr.io/devcontainers-extra/features/cmake": {},
     "ghcr.io/devcontainers/features/git:1": {
       "ppa": true,
       "version": "latest"
@@ -41,10 +53,7 @@
         "jqVersion": "latest",
         "yqVersion": "latest"
     },
-    "ghcr.io/devcontainers-community/features/direnv": {},
     "ghcr.io/devcontainers-community/features/llvm": {},
-    "ghcr.io/devcontainer-community/devcontainer-features/starship.rs:1": {},
-    "ghcr.io/devcontainer-community/devcontainer-features/btop:1": {},
     "ghcr.io/devcontainers-extra/features/fd:1": {},
     "ghcr.io/devcontainers-extra/features/ripgrep:1": {}
   },
@@ -64,15 +73,11 @@
         "ms-vscode.cpptools",
         "ms-vscode.cpptools-themes",
         "jeff-hykin.better-cpp-syntax",
-        "ms-vscode.makefile-tools",
         "TheQtCompany.qt-core",
         "TheQtCompany.qt-cpp",
         "TheQtCompany.qt-qml",
         "GitHub.copilot",
         "GitHub.copilot-chat",
-        "github.vscode-github-actions",
-        "GitHub.vscode-pull-request-github",
-        "ms-vscode.makefile-tools",
         "eamodio.gitlens",
         "isudox.vscode-jetbrains-keybindings"
       ],
@@ -99,7 +104,13 @@
   },
   "containerEnv": {
   },
-  "remoteUser": "vscode",
-  "initializeCommand": "python3 ./.devcontainer/scripts/initialize.py",
-  "postCreateCommand": ".devcontainer/scripts/post_create.sh"
+  "postCreateCommand":{
+    "Fix /assetcache permissions": "sudo chown -R $(whoami): /assetcache",
+    "Fix /bincache permissions": "sudo chown -R $(whoami): /bincache",
+    "Fix /ccache permissions": "sudo chown -R $(whoami): /ccache",
+    "Fix /commandhistory permissions": "sudo chown -R $(whoami): /commandhistory",
+    "Fix build permissions": "sudo chown -R $(whoami) build",
+    "Fix .vcpkg/installed permissions": "sudo chown -R $(whoami) .vcpkg/installed",
+    "Setup ccache": ".devcontainer/scripts/setup_ccache.sh"
+  }
 }

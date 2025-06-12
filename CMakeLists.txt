@@ -1,5 +1,4 @@
-
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 
 # Set project name and version
 project(
@@ -14,20 +13,59 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(PROJECT_OPTS ${PROJECT_NAME}_opts)
+add_library(${PROJECT_OPTS} INTERFACE)
+
 # Add compiler-specific options
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion)
-    add_compile_options(-fcolor-diagnostics)
+    # Warnings
+    target_compile_options(${PROJECT_OPTS} 
+        INTERFACE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+
+    # Misc
+    target_compile_options(${PROJECT_OPTS}
+        INTERFACE 
+            -fcolor-diagnostics)
     
     # Debug build options
-    add_compile_options($<$<CONFIG:Debug>:-g3 -O0 -fno-omit-frame-pointer>)
-    add_compile_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)
-    add_link_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)
+    target_compile_options(${PROJECT_OPTS}
+        INTERFACE
+            $<$<CONFIG:Debug>:-g3>
+            $<$<CONFIG:Debug>:-O0>
+            $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
+    )
+
+    # Sanitizer options
+    target_compile_options(${PROJECT_OPTS}
+        INTERFACE
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+    )
+    target_link_options(${PROJECT_OPTS}
+        INTERFACE
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+    )
     
     # Release build options
-    add_compile_options($<$<CONFIG:Release>:-O3 -DNDEBUG>)
-    add_compile_options($<$<CONFIG:Release>:-flto>)
-    add_link_options($<$<CONFIG:Release>:-flto>)
+    target_compile_options(${PROJECT_OPTS}
+        INTERFACE
+            $<$<CONFIG:Release>:-O3>
+            $<$<CONFIG:Release>:-DNDEBUG>
+    )
+
+    # lto
+    target_compile_options(${PROJECT_OPTS}
+        INTERFACE
+            $<$<CONFIG:Release>:-flto>)
+    target_link_options(${PROJECT_OPTS}
+        INTERFACE
+            $<$<CONFIG:Release>:-flto>)
 endif()
 
 # Find packages
@@ -54,18 +92,23 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+
 # Create main executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
 )
 
+#target-specific compile options
+target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
+    INTERFACE ${PROJECT_OPTS}
     PRIVATE
         fmt::fmt
         nlohmann_json::nlohmann_json
-        Qt5::Core
-        Qt5::Widgets
+        Qt::Core
+        Qt::Widgets
 )
 
 # Set target properties
