@@ -5,6 +5,10 @@
   "description": "cpp-ideas",
   "dependencies": [
     "fmt",
+    {
+      "name": "python3",
+      "features": ["extensions"]
+    },
     "nlohmann-json",
     "boost",
     "qtbase",

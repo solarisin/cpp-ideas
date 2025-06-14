@@ -76,6 +76,9 @@
         "TheQtCompany.qt-core",
         "TheQtCompany.qt-cpp",
         "TheQtCompany.qt-qml",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.pylint",
         "GitHub.copilot",
         "GitHub.copilot-chat",
         "eamodio.gitlens",
@@ -98,6 +101,28 @@
             "Ninja",
             "Unix Makefiles"
           ]
+        },
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "python.venvPath": "${workspaceFolder}/.venv",
+        "python.terminal.activateEnvironment": true,
+        "python.analysis.autoImportCompletions": true,
+        "python.analysis.typeCheckingMode": "basic",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.linting.flake8Enabled": true,
+        "python.linting.mypyEnabled": true,
+        "python.formatting.provider": "black",
+        "python.sortImports.provider": "isort",
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestEnabled": true,
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        "files.associations": {
+          "*.py": "python"
         }
       }
     }
@@ -111,6 +136,8 @@
     "Fix /commandhistory permissions": "sudo chown -R $(whoami): /commandhistory",
     "Fix build permissions": "sudo chown -R $(whoami) build",
     "Fix .vcpkg/installed permissions": "sudo chown -R $(whoami) .vcpkg/installed",
-    "Setup ccache": ".devcontainer/scripts/setup_ccache.sh"
+    "Setup ccache": ".devcontainer/scripts/setup_ccache.sh",
+    "Setup Python venv": "python3 -m venv .venv && .venv/bin/pip install --upgrade pip setuptools wheel",
+    "Install Python dev tools": ".venv/bin/pip install -r requirements-dev.txt"
   }
 }

@@ -79,6 +79,9 @@ endif()
 # Find required packages
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(Boost REQUIRED COMPONENTS python312)
+find_package(loguru CONFIG REQUIRED)
 
 # Qt6 setup
 find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
@@ -90,12 +93,14 @@ set(CMAKE_AUTOUIC ON)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${Python3_INCLUDE_DIRS}
 )
 
 
 # Create main executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
+    src/python_processor.cpp
 )
 
 #target-specific compile options
@@ -109,6 +114,9 @@ target_link_libraries(${PROJECT_NAME}
         nlohmann_json::nlohmann_json
         Qt::Core
         Qt::Widgets
+        Python3::Python
+        Boost::python312
+        loguru::loguru
 )
 
 # Set target properties
@@ -116,6 +124,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
+    ENABLE_EXPORTS ON # Ensure Python symbols are exported for dynamic loading of extension modules
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
@@ -124,7 +133,6 @@ enable_testing()
 
 # Add subdirectories
 add_subdirectory(tests)
-add_subdirectory(examples)
 
 # Installation rules
 install(TARGETS ${PROJECT_NAME}

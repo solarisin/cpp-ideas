@@ -15,11 +15,14 @@ if(NOT Catch2_FOUND)
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 endif()
 
+find_package(loguru CONFIG REQUIRED)
+
 # Create test executable
 add_executable(tests
     test_main.cpp
     test_json.cpp
     test_formatting.cpp
+    test_stuff.cpp
 )
 
 # Link libraries
@@ -29,6 +32,7 @@ target_link_libraries(tests
         fmt::fmt
         nlohmann_json::nlohmann_json
         Qt::Core
+        loguru::loguru
 )
 
 # Include test discovery
