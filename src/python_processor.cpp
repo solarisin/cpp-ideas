@@ -56,17 +56,17 @@ public:
                 bp::object sys = bp::import("sys");
                 bp::list path = bp::extract<bp::list>(sys.attr("path"));
                 
-                // Add the src directory to Python path
+                // Add the python directory to Python path
                 std::filesystem::path currentPath = std::filesystem::current_path();
-                std::filesystem::path srcPath = currentPath / "src";
+                std::filesystem::path pythonPath = currentPath / "python";
                 
-                if (std::filesystem::exists(srcPath)) {
-                    LOG_F(INFO, "Adding src path: %s", srcPath.c_str());
-                    path.append(srcPath.string());
+                if (std::filesystem::exists(pythonPath)) {
+                    LOG_F(INFO, "Adding python path: %s", pythonPath.c_str());
+                    path.append(pythonPath.string());
                 } else {
                     LOG_F(INFO, "Adding relative paths...");
                     // Try relative path
-                    path.append("./src");
+                    path.append("./python");
                     path.append(".");
                 }
                 

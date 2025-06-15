@@ -20,10 +20,8 @@ public:
 int main( int argc, char* argv[] ) {
     loguru::init(argc, argv);
     loguru::add_file("test-run.log", loguru::Append, loguru::Verbosity_MAX);
-    LOG_SCOPE_F(0, "SCOPED");
-    LOG_F(0, "BEFORE");
+    LOG_SCOPE_F(0, "TEST RUN LOG");
     int result = Catch::Session().run( argc, argv );
-    LOG_F(0, "AFTER");
 
     return result;
 }

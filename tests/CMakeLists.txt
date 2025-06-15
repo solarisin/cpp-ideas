@@ -23,6 +23,7 @@ add_executable(tests
     test_json.cpp
     test_formatting.cpp
     test_stuff.cpp
+    test_python_processor.cpp
 )
 
 # Link libraries
@@ -33,16 +34,18 @@ target_link_libraries(tests
         nlohmann_json::nlohmann_json
         Qt::Core
         loguru::loguru
+        python_processor_lib
 )
 
 # Include test discovery
 include(CTest)
 include(Catch)
-catch_discover_tests(tests)
+catch_discover_tests(tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # Set properties
 set_target_properties(tests PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    ENABLE_EXPORTS ON
 )

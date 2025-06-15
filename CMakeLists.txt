@@ -97,10 +97,31 @@ include_directories(
 )
 
 
+# Create python processor library
+add_library(python_processor_lib
+    src/python_processor.cpp
+)
+
+target_link_libraries(python_processor_lib
+    PUBLIC
+        fmt::fmt
+        nlohmann_json::nlohmann_json
+        Python3::Python
+        Boost::python312
+        loguru::loguru
+)
+
+target_include_directories(python_processor_lib
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${Python3_INCLUDE_DIRS}
+)
+
 # Create main executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    src/python_processor.cpp
+    src/mainwindow.cpp
 )
 
 #target-specific compile options
@@ -110,13 +131,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
 target_link_libraries(${PROJECT_NAME}
     INTERFACE ${PROJECT_OPTS}
     PRIVATE
-        fmt::fmt
-        nlohmann_json::nlohmann_json
+        python_processor_lib
         Qt::Core
         Qt::Widgets
-        Python3::Python
-        Boost::python312
-        loguru::loguru
 )
 
 # Set target properties

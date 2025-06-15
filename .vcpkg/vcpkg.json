@@ -10,40 +10,12 @@
       "features": ["extensions"]
     },
     "nlohmann-json",
-    "boost",
     "qtbase",
-    "qtlocation",
-    "qttools",
-    "qtwebsockets",
-    "qtcharts",
     "qcoro",
+    "benchmark",
     "argparse",
     "catch2",
-    "benchmark",
-    "cryptopp",
-    "graphviz",
-    "gperftools",
-    "geotrans",
-    "geographiclib",
-    "fftw3",
-    "intel-mkl",
-    "gsl",
-    "grpc",
-    "libpcap",
-    "whisper-cpp",
-    "tbb",
-    "speex",
-    "sparsehash",
-    "rtlsdr",
-    "rtaudio",
-    "qwt",
-    "proj",
-    "openssl",
     "loguru",
-    "libusb",
-    {
-      "name": "soapysdr",
-      "platform": "!uwp & !static"
-    }
+    "boost-python"
   ]
 }

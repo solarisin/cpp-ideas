@@ -53,7 +53,7 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest]
-testpaths = ["tests", "src"]
+testpaths = ["tests", "python"]
 python_files = ["test_*.py", "*_test.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
