@@ -4,6 +4,7 @@
 build/
 install/
 CMakeCache.txt
+test-run.log
 
 # Python files and directories
 __pycache__/

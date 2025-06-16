@@ -71,18 +71,27 @@ public:
                 }
                 
                 // Add vcpkg Python paths for extension modules
-                std::filesystem::path vcpkgPath = currentPath / ".vcpkg" / "installed" / "x64-linux";
+                std::filesystem::path vcpkgPath;
+#ifdef CPPIDEAS_DEPS_DIR
+                vcpkgPath = CPPIDEAS_DEPS_DIR;
+#else
+                throw std::runtime_error("CPPIDEAS_DEPS_DIR is not defined. Please define it to point to the vcpkg dependencies directory.");
+#endif
                 std::filesystem::path libDynload = vcpkgPath / "lib" / "python3.12" / "lib-dynload";
                 std::filesystem::path libPath = vcpkgPath / "lib" / "python3.12";
-                
+
                 if (std::filesystem::exists(libDynload)) {
                     LOG_F(INFO, "Adding vcpkg lib-dynload path: %s", libDynload.c_str());
                     path.append(libDynload.string());
+                } else{
+                    LOG_F(ERROR, "Vcpkg lib-dynload path not found: %s", libDynload.c_str());
                 }
                 
                 if (std::filesystem::exists(libPath)) {
                     LOG_F(INFO, "Adding vcpkg lib path: %s", libPath.c_str());
                     path.append(libPath.string());
+                } else {
+                    LOG_F(ERROR, "Vcpkg lib path not found: %s", libPath.c_str());
                 }
                 
                 // Add venv site-packages if it exists

@@ -94,9 +94,7 @@
         "cmake": {
           "configureOnOpen": false,
           "buildDirectory": "${workspaceFolder}/build",
-          "configureArgs": [
-            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-          ],
+          "configureArgs": [],
           "preferredGenerators": [
             "Ninja",
             "Unix Makefiles"

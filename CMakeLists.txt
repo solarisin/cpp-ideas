@@ -9,7 +9,9 @@ project(
 )
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 23)
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -96,13 +98,21 @@ include_directories(
     ${Python3_INCLUDE_DIRS}
 )
 
-
 # Create python processor library
 add_library(python_processor_lib
     src/python_processor.cpp
 )
 
+if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    set(CPPIDEAS_DEPS_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+    target_compile_definitions(python_processor_lib
+        PRIVATE
+            CPPIDEAS_DEPS_DIR="${CPPIDEAS_DEPS_DIR}"
+    )
+endif()
+
 target_link_libraries(python_processor_lib
+    INTERFACE ${PROJECT_OPTS}
     PUBLIC
         fmt::fmt
         nlohmann_json::nlohmann_json
@@ -138,7 +148,7 @@ target_link_libraries(${PROJECT_NAME}
 
 # Set target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 23
+    CXX_STANDARD ${CMAKE_CXX_STANDARD}
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
     ENABLE_EXPORTS ON # Ensure Python symbols are exported for dynamic loading of extension modules

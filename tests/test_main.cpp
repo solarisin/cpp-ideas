@@ -9,7 +9,7 @@ class testRunListener : public Catch::EventListenerBase {
 public:
     using Catch::EventListenerBase::EventListenerBase;
 
-    void testRunStarting(Catch::TestRunInfo const& ri) override {
+    void testRunStarting(Catch::TestRunInfo const&) override {
         {
             LOG_F(0, "testRunStarting");
         }

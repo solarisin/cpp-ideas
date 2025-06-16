@@ -29,7 +29,6 @@
 #include <QTimer>
 #include <loguru/loguru.hpp>
 #include <nlohmann/json.hpp>
-#include <loguru/loguru.hpp>
 
 
 CppIdeasMainWindow::CppIdeasMainWindow(QWidget* parent) : QMainWindow(parent) {

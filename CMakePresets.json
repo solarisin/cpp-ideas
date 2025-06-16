@@ -2,28 +2,85 @@
     "version": 8,
     "configurePresets": [
         {
-            "name": "linux-x64-debug",
+            "name": "linux-x64",
+            "hidden": true,
             "displayName": "",
             "description": "",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/",
-            "installDir": "${sourceDir}/install",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install/${presetName}",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "environment": {
                 "VCPKG_DEFAULT_BINARY_CACHE": "/bincache",
-                "X_VCPKG_ASSET_SOURCES": "clear;x-azurl,file:///assetcache,,readwrite",
-                "CC": "/usr/lib/ccache/clang",
-                "CXX": "/usr/lib/ccache/clang++"
+                "X_VCPKG_ASSET_SOURCES": "clear;x-azurl,file:///assetcache,,readwrite"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
-                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-                "VCPKG_TARGET_TRIPLET": "x64-linux",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_C_STANDARD": "17",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
                 "VCPKG_MANIFEST_DIR": "${sourceDir}/.vcpkg",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/.vcpkg/installed",
-                "VCPKG_MANIFEST_INSTALL": "ON"
+                "VCPKG_MANIFEST_INSTALL": "ON",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/.vcpkg/triplets",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+            }
+        },
+        {
+            "name": "linux-x64-static",
+            "hidden": true,
+            "inherits": "linux-x64",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-linux-static",
+                "VCPKG_INSTALL_OPTIONS": "--host-triplet=x64-linux-static"
+            }
+        },
+        {
+            "name": "linux-x64-dynamic",
+            "hidden": true,
+            "inherits": "linux-x64",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-linux-dynamic",
+                "VCPKG_INSTALL_OPTIONS": "--host-triplet=x64-linux-dynamic"
+            }
+        },
+        {
+            "name": "linux-x64-static-debug",
+            "inherits": "linux-x64-static",
+            "displayName": "Linux x64 Static Debug",
+            "description": "Debug build for Linux x64 Static",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-x64-static-release",
+            "inherits": "linux-x64-static",
+            "displayName": "Linux x64 Static Release",
+            "description": "Release build for Linux x64 Static",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-x64-dynamic-debug",
+            "inherits": "linux-x64-dynamic",
+            "displayName": "Linux x64 Dynamic Debug",
+            "description": "Debug build for Linux x64 Dynamic",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-x64-dynamic-release",
+            "inherits": "linux-x64-dynamic",
+            "displayName": "Linux x64 Dynamic Release",
+            "description": "Release build for Linux x64 Dynamic",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
             }
         }
     ]
