@@ -48,8 +48,7 @@ RUN apt-get update && \
         valgrind \
         wget \
         xz-utils \
-        zip \
-        '^libxcb.*-dev' && \
+        zip && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \

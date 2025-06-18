@@ -95,7 +95,7 @@ if(NOT _VCPKG_LINUX_TOOLCHAIN)
     string(APPEND CMAKE_ASM_FLAGS_INIT " ${VCPKG_C_FLAGS} ")
 
     set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE STRING "C compiler")
-    set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE STRING "C++ compiler")
     set(CMAKE_C_COMPILER_LAUNCHER "ccache" CACHE STRING "C compiler launcher")
+    set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE STRING "C++ compiler")
     set(CMAKE_CXX_COMPILER_LAUNCHER "ccache" CACHE STRING "C++ compiler launcher")
 endif()

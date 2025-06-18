@@ -3,8 +3,151 @@
 #include <sstream>
 #include <filesystem>
 #include <loguru/loguru.hpp>
+#include <mutex>
+#include <memory>
 
 namespace bp = boost::python;
+
+// Singleton Python manager to handle interpreter lifetime
+class PythonManager {
+private:
+    static std::unique_ptr<PythonManager> instance;
+    static std::mutex initMutex;
+    bool initialized = false;
+    std::string lastError;
+
+    PythonManager() = default;
+
+public:
+    static PythonManager& getInstance() {
+        std::lock_guard<std::mutex> lock(initMutex);
+        if (!instance) {
+            instance = std::unique_ptr<PythonManager>(new PythonManager());
+        }
+        return *instance;
+    }
+
+    bool initializePython() {
+        std::lock_guard<std::mutex> lock(initMutex);
+        
+        if (initialized) {
+            return true; // Already initialized
+        }
+
+        try {
+            if (Py_IsInitialized()) {
+                LOG_F(INFO, "Python already initialized by another component");
+                initialized = true;
+                return true;
+            }
+
+            LOG_F(INFO, "Starting Python interpreter initialization...");
+
+            PyConfig config;
+            PyConfig_InitPythonConfig(&config);
+
+            auto currentPath = std::filesystem::current_path();
+            auto venvPath = currentPath / ".venv";
+            
+            LOG_F(INFO, "Current path: %s", currentPath.string().c_str());
+            LOG_F(INFO, "Venv path: %s", venvPath.string().c_str());
+
+            config.isolated = 0;
+            config.use_environment = 1;
+
+            LOG_F(INFO, "Initializing Python from config...");
+            PyStatus status = Py_InitializeFromConfig(&config);
+            PyConfig_Clear(&config);
+            
+            if (PyStatus_Exception(status)) {
+                lastError = "Failed to initialize Python: " + std::string(status.err_msg ? status.err_msg : "Unknown error");
+                LOG_F(ERROR, "%s", lastError.c_str());
+                return false;
+            }
+
+            LOG_F(INFO, "Python initialized successfully");
+
+            // Set up Python paths
+            PyGILState_STATE gstate = PyGILState_Ensure();
+            
+            try {
+                LOG_F(INFO, "Setting up Python paths...");
+
+                bp::object sys_module = bp::import("sys");
+                bp::list sys_path = bp::extract<bp::list>(sys_module.attr("path"));
+
+                // Add python directory to path
+                auto pythonPath = currentPath / "python";
+                if (std::filesystem::exists(pythonPath)) {
+                    LOG_F(INFO, "Adding python path: %s", pythonPath.string().c_str());
+                    sys_path.append(pythonPath.string());
+                }
+
+                // Add vcpkg paths if they exist
+                auto vcpkgDynloadPath = currentPath / ".vcpkg" / "installed" / "x64-linux-dynamic" / "lib" / "python3.12" / "lib-dynload";
+                if (std::filesystem::exists(vcpkgDynloadPath)) {
+                    LOG_F(INFO, "Adding vcpkg lib-dynload path: %s", vcpkgDynloadPath.string().c_str());
+                    sys_path.append(vcpkgDynloadPath.string());
+                }
+
+                auto vcpkgLibPath = currentPath / ".vcpkg" / "installed" / "x64-linux-dynamic" / "lib" / "python3.12";
+                if (std::filesystem::exists(vcpkgLibPath)) {
+                    LOG_F(INFO, "Adding vcpkg lib path: %s", vcpkgLibPath.string().c_str());
+                    sys_path.append(vcpkgLibPath.string());
+                }
+
+                // Add venv site-packages if it exists
+                auto venvSitePackages = venvPath / "lib" / "python3.12" / "site-packages";
+                if (std::filesystem::exists(venvSitePackages)) {
+                    LOG_F(INFO, "Adding venv site-packages: %s", venvSitePackages.string().c_str());
+                    sys_path.append(venvSitePackages.string());
+                }
+
+                initialized = true;
+                LOG_F(INFO, "Python manager initialization completed successfully");
+
+            } catch (const bp::error_already_set&) {
+                PyErr_Print();
+                lastError = "Error setting up Python paths";
+                LOG_F(ERROR, "%s", lastError.c_str());
+                PyGILState_Release(gstate);
+                return false;
+            }
+
+            PyGILState_Release(gstate);
+            return true;
+
+        } catch (const std::exception& e) {
+            lastError = "Exception during Python initialization: " + std::string(e.what());
+            LOG_F(ERROR, "%s", lastError.c_str());
+            return false;
+        } catch (...) {
+            LOG_F(ERROR, "Unknown exception during Python initialization");
+            lastError = "Unknown error during Python initialization";
+            return false;
+        }
+    }
+
+    bool isInitialized() const {
+        return initialized && Py_IsInitialized();
+    }
+
+    const std::string& getLastError() const {
+        return lastError;
+    }
+
+    ~PythonManager() {
+        if (initialized && Py_IsInitialized()) {
+            LOG_F(INFO, "Finalizing Python interpreter...");
+            Py_Finalize();
+            LOG_F(INFO, "Python interpreter finalized successfully");
+        }
+    }
+};
+
+// Static member definitions
+std::unique_ptr<PythonManager> PythonManager::instance = nullptr;
+std::mutex PythonManager::initMutex;
 
 class PythonProcessor::Impl {
 public:
@@ -12,98 +155,19 @@ public:
         LOG_F(INFO, "Starting Python processor initialization...");
         
         try {
-            if (!Py_IsInitialized()) {
-                LOG_F(INFO, "Python not initialized, setting up configuration...");
-                
-                // Use PyConfig for Python 3.8+ initialization
-                PyConfig config;
-                PyConfig_InitPythonConfig(&config);
-                
-                // For embedded Python, we should use the system Python paths
-                // but add our venv site-packages to the path later
-                std::filesystem::path currentPath = std::filesystem::current_path();
-                std::filesystem::path venvPath = currentPath / ".venv";
-                
-                LOG_F(INFO, "Current path: %s", currentPath.c_str());
-                LOG_F(INFO, "Venv path: %s", venvPath.c_str());
-                
-                // Don't set PYTHONHOME to venv - let it use system defaults
-                // We'll add the venv site-packages directory to sys.path later
-                
-                LOG_F(INFO, "Initializing Python from config...");
-                // Initialize Python with config
-                PyStatus status = Py_InitializeFromConfig(&config);
-                PyConfig_Clear(&config);
-                
-                if (PyStatus_Exception(status)) {
-                    LOG_F(ERROR, "Python initialization failed");
-                    lastError = "Failed to initialize Python from config";
-                    return;
-                } else {
-                    LOG_F(INFO, "Python initialized successfully");
-                }
-            } else {
-                LOG_F(INFO, "Python already initialized");
-            }
+            // Use the singleton PythonManager to ensure Python is initialized only once
+            PythonManager& pythonManager = PythonManager::getInstance();
             
+            if (!pythonManager.initializePython()) {
+                lastError = "Failed to initialize Python: " + pythonManager.getLastError();
+                LOG_F(ERROR, "%s", lastError.c_str());
+                return;
+            }
+
             LOG_F(INFO, "Acquiring GIL...");
-            // Ensure we have the main thread state
             PyGILState_STATE gstate = PyGILState_Ensure();
             
             try {
-                LOG_F(INFO, "Setting up Python paths...");
-                // Add current directory to Python path
-                bp::object sys = bp::import("sys");
-                bp::list path = bp::extract<bp::list>(sys.attr("path"));
-                
-                // Add the python directory to Python path
-                std::filesystem::path currentPath = std::filesystem::current_path();
-                std::filesystem::path pythonPath = currentPath / "python";
-                
-                if (std::filesystem::exists(pythonPath)) {
-                    LOG_F(INFO, "Adding python path: %s", pythonPath.c_str());
-                    path.append(pythonPath.string());
-                } else {
-                    LOG_F(INFO, "Adding relative paths...");
-                    // Try relative path
-                    path.append("./python");
-                    path.append(".");
-                }
-                
-                // Add vcpkg Python paths for extension modules
-                std::filesystem::path vcpkgPath;
-#ifdef CPPIDEAS_DEPS_DIR
-                vcpkgPath = CPPIDEAS_DEPS_DIR;
-#else
-                throw std::runtime_error("CPPIDEAS_DEPS_DIR is not defined. Please define it to point to the vcpkg dependencies directory.");
-#endif
-                std::filesystem::path libDynload = vcpkgPath / "lib" / "python3.12" / "lib-dynload";
-                std::filesystem::path libPath = vcpkgPath / "lib" / "python3.12";
-
-                if (std::filesystem::exists(libDynload)) {
-                    LOG_F(INFO, "Adding vcpkg lib-dynload path: %s", libDynload.c_str());
-                    path.append(libDynload.string());
-                } else{
-                    LOG_F(ERROR, "Vcpkg lib-dynload path not found: %s", libDynload.c_str());
-                }
-                
-                if (std::filesystem::exists(libPath)) {
-                    LOG_F(INFO, "Adding vcpkg lib path: %s", libPath.c_str());
-                    path.append(libPath.string());
-                } else {
-                    LOG_F(ERROR, "Vcpkg lib path not found: %s", libPath.c_str());
-                }
-                
-                // Add venv site-packages if it exists
-                std::filesystem::path venvPath = currentPath / ".venv";
-                std::filesystem::path venvSitePackages = venvPath / "lib" / "python3.12" / "site-packages";
-                if (std::filesystem::exists(venvSitePackages)) {
-                    LOG_F(INFO, "Adding venv site-packages: %s", venvSitePackages.c_str());
-                    path.append(venvSitePackages.string());
-                } else {
-                    LOG_F(WARNING, "Venv site-packages not found: %s", venvSitePackages.c_str());
-                }
-                
                 // Import the processor module
                 LOG_F(INFO, "Importing processor module...");
                 try {
@@ -120,7 +184,7 @@ public:
                     LOG_F(ERROR, "Failed to import processor module:");
                     PyErr_Print();
                     PyErr_Clear();
-                    lastError = "Failed to import processor module. Make sure processor.py is in the src directory.";
+                    lastError = "Failed to import processor module. Make sure processor.py is in the python directory.";
                 }
                 
             } catch (const bp::error_already_set&) {
@@ -146,12 +210,24 @@ public:
     
     ~Impl() {
         try {
-            if (Py_IsInitialized()) {
-                // Don't finalize Python as it might be used elsewhere
-                // Py_Finalize();
+            // Only clean up our own objects, not the entire Python interpreter
+            // The singleton PythonManager will handle interpreter cleanup
+            if (initialized && Py_IsInitialized()) {
+                LOG_F(INFO, "Cleaning up Python processor objects...");
+                
+                // Acquire GIL before cleanup
+                PyGILState_STATE gstate = PyGILState_Ensure();
+                
+                // Clean up boost::python objects while the interpreter is still active
+                processorModule = {};
+                processFunction = {};
+                
+                PyGILState_Release(gstate);
+                LOG_F(INFO, "Python processor cleanup completed");
             }
         } catch (...) {
-            // Ignore errors during cleanup
+            LOG_F(ERROR, "Error during Python processor cleanup");
+            // Ignore errors during cleanup to prevent exceptions in destructor
         }
     }
     
@@ -167,11 +243,12 @@ public:
         PyGILState_STATE gstate = PyGILState_Ensure();
         
         try {
-            LOG_F(INFO, "Calling Python function...");
-            // Call the Python function
-            bp::object result = processFunction(jsonInput);
-            
-            LOG_F(INFO, "Python function completed successfully");
+            bp::object result;
+            {
+                // Call the Python function
+                LOG_SCOPE_F(INFO, "Executing Python function");
+                result = processFunction(jsonInput);
+            }
             // Extract the result as a string
             std::string resultStr = bp::extract<std::string>(result);
             lastError.clear();

@@ -23,9 +23,7 @@
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/.vcpkg/installed",
                 "VCPKG_MANIFEST_INSTALL": "ON",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/.vcpkg/triplets",
-                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-                "CMAKE_C_COMPILER": "/usr/bin/clang",
                 "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
             }
         },
@@ -81,6 +79,74 @@
             "description": "Release build for Linux x64 Dynamic",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux-x64-dynamic-debug",
+            "configurePreset": "linux-x64-dynamic-debug",
+            "displayName": "Linux x64 Dynamic Debug Build",
+            "description": "Build the Linux x64 Dynamic Debug configuration"
+        },
+        {
+            "name": "linux-x64-dynamic-release",
+            "configurePreset": "linux-x64-dynamic-release",
+            "displayName": "Linux x64 Dynamic Release Build",
+            "description": "Build the Linux x64 Dynamic Release configuration"
+        },
+        {
+            "name": "linux-x64-static-debug",
+            "configurePreset": "linux-x64-static-debug",
+            "displayName": "Linux x64 Static Debug Build",
+            "description": "Build the Linux x64 Static Debug configuration"
+        },
+        {
+            "name": "linux-x64-static-release",
+            "configurePreset": "linux-x64-static-release",
+            "displayName": "Linux x64 Static Release Build",
+            "description": "Build the Linux x64 Static Release configuration"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "linux-x64-dynamic-debug",
+            "configurePreset": "linux-x64-dynamic-debug",
+            "displayName": "Linux x64 Dynamic Debug Tests",
+            "description": "Run tests for Linux x64 Dynamic Debug configuration",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "verbose"
+            }
+        },
+        {
+            "name": "linux-x64-static-debug-test",
+            "configurePreset": "linux-x64-static-debug",
+            "displayName": "Linux x64 Static Debug Tests",
+            "description": "Run tests for Linux x64 Static Debug configuration",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "verbose"
+            }
+        },
+        {
+            "name": "linux-x64-dynamic-release-test",
+            "configurePreset": "linux-x64-dynamic-release",
+            "displayName": "Linux x64 Dynamic Release Tests",
+            "description": "Run tests for Linux x64 Dynamic Release configuration",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "verbose"
+            }
+        },
+        {
+            "name": "linux-x64-static-release-test",
+            "configurePreset": "linux-x64-static-release",
+            "displayName": "Linux x64 Static Release Tests",
+            "description": "Run tests for Linux x64 Static Release configuration",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "verbose"
             }
         }
     ]

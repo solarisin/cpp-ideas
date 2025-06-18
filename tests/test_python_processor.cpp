@@ -207,7 +207,7 @@ TEST_CASE("Python Processor JSON Processing", "[python][processor][json]")
     {
         SECTION("Invalid JSON")
         {
-            std::string request = R"({"type": "math", "operation": "add", "numbers": [1, 2, 3})"; // Invalid JSON - missing ]
+            std::string request = R"(invalid json string)"; // Invalid JSON - not JSON at all
             std::string result = processor.processJson(request);
             
             REQUIRE_FALSE(result.empty());

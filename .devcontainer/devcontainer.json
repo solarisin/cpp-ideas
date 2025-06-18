@@ -125,8 +125,6 @@
       }
     }
   },
-  "containerEnv": {
-  },
   "postCreateCommand":{
     "Fix /assetcache permissions": "sudo chown -R $(whoami): /assetcache",
     "Fix /bincache permissions": "sudo chown -R $(whoami): /bincache",

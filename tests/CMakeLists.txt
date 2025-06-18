@@ -40,6 +40,7 @@ target_link_libraries(tests
 # Include test discovery
 include(CTest)
 include(Catch)
+
 catch_discover_tests(tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # Set properties
