@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="tests" errors="0" failures="4" skipped="0" tests="852" hostname="tbd" time="0.988" timestamp="2025-06-18T04:23:42Z">
+    <properties>
+      <property name="random-seed" value="4158285898"/>
+    </properties>
+    <testcase classname="tests.global" name="JSON parsing and manipulation" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="JSON parsing and manipulation/Basic JSON creation and access" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="JSON parsing and manipulation/JSON serialization" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="JSON parsing and manipulation/JSON validation" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="Format library functionality" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="Format library functionality/Basic string formatting" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="Format library functionality/Number formatting" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="Format library functionality/Advanced formatting" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="Format library functionality/Custom types and formatting" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="Format library functionality/Performance compared to iostream" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="Test random stuff" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="Test random stuff/Test 1" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="Python Processor Initialization" time="0.130" status="run"/>
+    <testcase classname="tests.global" name="Python Processor Initialization/Python processor initializes successfully" time="0.130" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing" time="0.009" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Math operations" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Math operations/Addition operation" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Math operations/Multiplication operation" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Math operations/Mean operation" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Math operations/Power operation" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Math operations/Empty numbers array" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Text operations" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Text operations/Uppercase operation" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Text operations/Lowercase operation" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Text operations/Reverse operation" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Text operations/Empty text" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Data operations" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Data operations/Statistics calculation" time="0.003" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Data operations/Statistics with single value" time="0.003" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Data operations/Empty dataset" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Echo operations" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Echo operations/Basic echo" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Echo operations/Echo with complex data" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Error handling" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Error handling/Invalid JSON" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Error handling/Unknown operation type" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Error handling/Missing required fields" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Response structure validation" time="0.006" status="run"/>
+    <testcase classname="tests.global" name="Python Processor JSON Processing/Response structure validation/All responses have required fields" time="0.006" status="run"/>
+    <testcase classname="tests.global" name="Python Processor Performance" time="0.184" status="run"/>
+    <testcase classname="tests.global" name="Python Processor Performance/Multiple sequential requests" time="0.181" status="run"/>
+    <testcase classname="tests.global" name="Python Processor Thread Safety" time="0.007" status="run"/>
+    <testcase classname="tests.global" name="Python Processor Thread Safety/Single processor instance handles multiple requests" time="0.005" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands" time="0.033" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Processor initialization" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Module import capability" time="0.007" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Function listing" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Simple function calls" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Function calls with multiple arguments" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Module.function syntax" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/PythonCommand structure" time="0.001" status="run">
+      <failure message="result.actualType == &quot;int&quot;" type="REQUIRE">
+FAILED:
+  REQUIRE( result.actualType == "int" )
+with expansion:
+  "" == "int"
+at /workspaces/cpp-ideas/tests/test_generic_commands.cpp:73
+      </failure>
+    </testcase>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Direct code execution" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/String operations" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/List operations" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Error handling - non-existent module" time="0.007" status="run">
+      <failure message="!(result.success)" type="REQUIRE_FALSE">
+FAILED:
+  REQUIRE_FALSE( result.success )
+with expansion:
+  !true
+at /workspaces/cpp-ideas/tests/test_generic_commands.cpp:106
+      </failure>
+    </testcase>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Error handling - non-existent function" time="0.002" status="run">
+      <failure message="!(result.success)" type="REQUIRE_FALSE">
+FAILED:
+  REQUIRE_FALSE( result.success )
+with expansion:
+  !true
+at /workspaces/cpp-ideas/tests/test_generic_commands.cpp:112
+      </failure>
+    </testcase>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Error handling - invalid arguments" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Error handling - syntax error in code" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Generic Commands/Demo module functions - if available" time="0.031" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality" time="0.005" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Processor lifecycle" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Type conversion comprehensive tests" time="0.006" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Complex data structures" time="0.003" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Mathematical operations and precision" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/String manipulation edge cases" time="0.003" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Function calls with various argument types" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Error handling comprehensive" time="0.012" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/PythonCommand structure validation" time="0.001" status="run">
+      <failure message="result1.actualType == &quot;float&quot;" type="REQUIRE">
+FAILED:
+  REQUIRE( result1.actualType == "float" )
+with expansion:
+  "" == "float"
+at /workspaces/cpp-ideas/tests/test_python_processor_extended.cpp:173
+      </failure>
+    </testcase>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Module function listing edge cases" time="0.008" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Expression vs Statement execution" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Memory and performance considerations" time="0.106" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Extended Functionality/Backward compatibility validation" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Thread Safety Basics" time="0.006" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Thread Safety Basics/Sequential operations maintain state isolation" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Environment and Initialization Tests" time="0.008" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Environment and Initialization Tests/Single processor initialization" time="0.003" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Environment and Initialization Tests/Multiple processor instances" time="0.008" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Basic Code Execution Tests" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Basic Code Execution Tests/Simple arithmetic" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Basic Code Execution Tests/Boolean values with detailed debugging" time="0.002" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Basic Code Execution Tests/None values" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Basic Code Execution Tests/String values" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Basic Code Execution Tests/Float values" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Built-in Module Testing" time="0.007" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Built-in Module Testing/Debug Python environment" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Built-in Module Testing/Module import capability testing" time="0.000" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Built-in Module Testing/Function calling with debugging" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Error Handling and Edge Cases" time="0.003" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Error Handling and Edge Cases/Division by zero" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Error Handling and Edge Cases/Undefined variable" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Error Handling and Edge Cases/Syntax error" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Error Handling and Edge Cases/Type error in function call" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Complex Data Structures" time="0.005" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Complex Data Structures/Lists" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Complex Data Structures/Dictionaries" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Complex Data Structures/Nested structures" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Memory and Performance Tests" time="0.008" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Memory and Performance Tests/Repeated operations" time="0.054" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Memory and Performance Tests/Different operations in sequence" time="0.006" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Statement vs Expression Execution" time="0.004" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Statement vs Expression Execution/Variable assignments" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Statement vs Expression Execution/Expression evaluation" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="PythonProcessor Comprehensive Testing/Statement vs Expression Execution/Mixed code execution" time="0.001" status="run"/>
+    <testcase classname="tests.global" name="CircularReference - Multiple processor creation and destruction" time="0.076" status="run"/>
+    <testcase classname="tests.global" name="CircularReference - Boost Python object cleanup" time="0.022" status="run"/>
+    <testcase classname="tests.global" name="CircularReference - Python exception handling" time="0.012" status="run"/>
+    <testcase classname="tests.global" name="CircularReference - Explicit garbage collection" time="0.004" status="run"/>
+    <system-out/>
+    <system-err/>
+  </testsuite>
+</testsuites>

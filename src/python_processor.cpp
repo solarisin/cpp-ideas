@@ -8,6 +8,33 @@
 
 namespace bp = boost::python;
 
+// RAII helper for GIL management
+class GILGuard {
+public:
+    GILGuard() : state(PyGILState_Ensure()) {}
+    ~GILGuard() { PyGILState_Release(state); }
+    
+    // Non-copyable, non-movable
+    GILGuard(const GILGuard&) = delete;
+    GILGuard& operator=(const GILGuard&) = delete;
+    GILGuard(GILGuard&&) = delete;
+    GILGuard& operator=(GILGuard&&) = delete;
+    
+private:
+    PyGILState_STATE state;
+};
+
+// Helper class for creating fresh Python namespaces
+class NamespaceHelper {
+public:
+    static bp::dict createFreshNamespace() {
+        bp::dict fresh_namespace;
+        bp::object builtins = bp::import("builtins");
+        fresh_namespace["__builtins__"] = builtins;
+        return fresh_namespace;
+    }
+};
+
 // Singleton Python manager to handle interpreter lifetime
 class PythonManager {
 private:
@@ -76,12 +103,23 @@ public:
                 bp::object sys_module = bp::import("sys");
                 bp::list sys_path = bp::extract<bp::list>(sys_module.attr("path"));
 
+                // Helper lambda for adding paths
+                auto addPathIfExists = [&sys_path](const std::filesystem::path& path, const std::string& description, bool insertAtBeginning = false) {
+                    if (std::filesystem::exists(path)) {
+                        LOG_F(INFO, "Adding %s: %s", description.c_str(), path.string().c_str());
+                        if (insertAtBeginning) {
+                            sys_path.insert(0, path.string());
+                        } else {
+                            sys_path.append(path.string());
+                        }
+                        return true;
+                    }
+                    return false;
+                };
+                
                 // Add python directory to path
                 auto pythonPath = currentPath / "python";
-                if (std::filesystem::exists(pythonPath)) {
-                    LOG_F(INFO, "Adding python path: %s", pythonPath.string().c_str());
-                    sys_path.append(pythonPath.string());
-                }
+                addPathIfExists(pythonPath, "python path");
                 
                 // Add standard library paths if they're missing
                 std::vector<std::string> stdLibPaths = {
@@ -91,31 +129,19 @@ public:
                 };
                 
                 for (const auto& libPath : stdLibPaths) {
-                    if (std::filesystem::exists(libPath)) {
-                        LOG_F(INFO, "Adding standard library path: %s", libPath.c_str());
-                        sys_path.insert(0, libPath);  // Insert at beginning for priority
-                    }
+                    addPathIfExists(std::filesystem::path(libPath), "standard library path", true);
                 }
 
                 // Add vcpkg paths if they exist
                 auto vcpkgDynloadPath = currentPath / ".vcpkg" / "installed" / "x64-linux-dynamic" / "lib" / "python3.12" / "lib-dynload";
-                if (std::filesystem::exists(vcpkgDynloadPath)) {
-                    LOG_F(INFO, "Adding vcpkg lib-dynload path: %s", vcpkgDynloadPath.string().c_str());
-                    sys_path.append(vcpkgDynloadPath.string());
-                }
+                addPathIfExists(vcpkgDynloadPath, "vcpkg lib-dynload path");
 
                 auto vcpkgLibPath = currentPath / ".vcpkg" / "installed" / "x64-linux-dynamic" / "lib" / "python3.12";
-                if (std::filesystem::exists(vcpkgLibPath)) {
-                    LOG_F(INFO, "Adding vcpkg lib path: %s", vcpkgLibPath.string().c_str());
-                    sys_path.append(vcpkgLibPath.string());
-                }
+                addPathIfExists(vcpkgLibPath, "vcpkg lib path");
 
                 // Add venv site-packages if it exists
                 auto venvSitePackages = venvPath / "lib" / "python3.12" / "site-packages";
-                if (std::filesystem::exists(venvSitePackages)) {
-                    LOG_F(INFO, "Adding venv site-packages: %s", venvSitePackages.string().c_str());
-                    sys_path.append(venvSitePackages.string());
-                }
+                addPathIfExists(venvSitePackages, "venv site-packages");
                 
                 // Test if math module is now available
                 try {
@@ -188,7 +214,7 @@ public:
             }
 
             LOG_F(INFO, "Acquiring GIL...");
-            PyGILState_STATE gstate = PyGILState_Ensure();
+            GILGuard gil;
             
             try {
                 // Import the processor module for backward compatibility
@@ -220,8 +246,7 @@ public:
                 lastError = "Failed to set up Python environment";
             }
             
-            LOG_F(INFO, "Releasing GIL...");
-            PyGILState_Release(gstate);
+            LOG_F(INFO, "GIL released automatically by GILGuard");
             
         } catch (const std::exception& e) {
             LOG_F(ERROR, "Exception during Python initialization: %s", e.what());
@@ -242,13 +267,12 @@ public:
                 LOG_F(INFO, "Cleaning up Python processor objects...");
                 
                 // Acquire GIL before cleanup
-                PyGILState_STATE gstate = PyGILState_Ensure();
+                GILGuard gil;
                 
                 // Clean up boost::python objects while the interpreter is still active
                 processorModule = {};
                 processFunction = {};
                 
-                PyGILState_Release(gstate);
                 LOG_F(INFO, "Python processor cleanup completed");
             }
         } catch (...) {
@@ -257,17 +281,51 @@ public:
         }
     }
     
+    // Helper method to create error JSON responses
+    std::string createErrorJson(const std::string& errorMessage) {
+        return R"({"success": false, "error": ")" + errorMessage + R"("})";
+    }
+    
+    // Helper method to handle Python errors in JSON processing
+    std::string handlePythonJsonError() {
+        std::stringstream ss;
+        ss << "Python execution error: ";
+        
+        if (PyErr_Occurred()) {
+            PyObject *ptype, *pvalue, *ptraceback;
+            PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+            
+            if (pvalue) {
+                PyObject* str = PyObject_Str(pvalue);
+                if (str) {
+                    const char* errorStr = PyUnicode_AsUTF8(str);
+                    if (errorStr) {
+                        ss << errorStr;
+                    }
+                    Py_DECREF(str);
+                }
+            }
+            
+            cleanupErrorObjects(ptype, pvalue, ptraceback);
+        } else {
+            ss << "Unknown Python error";
+        }
+        
+        PyErr_Clear();
+        return createErrorJson(ss.str());
+    }
+    
     std::string processJson(const std::string& jsonInput) {
         LOG_F(INFO, "Processing JSON input: %s...", jsonInput.substr(0, 100).c_str());
         
         if (!initialized) {
             LOG_F(ERROR, "Python processor not initialized: %s", lastError.c_str());
-            return R"({"success": false, "error": "Python processor not initialized: )" + lastError + R"("})";
+            return createErrorJson("Python processor not initialized: " + lastError);
         }
         
         if (!processFunction) {
             LOG_F(ERROR, "Processor module not available");
-            return R"({"success": false, "error": "Processor module not available. Use generic executeCommand method instead."})";
+            return createErrorJson("Processor module not available. Use generic executeCommand method instead.");
         }
         
         LOG_F(INFO, "Acquiring GIL for processing...");
@@ -290,151 +348,86 @@ public:
             
         } catch (const bp::error_already_set&) {
             LOG_F(ERROR, "Python execution error occurred");
-            // Handle Python exceptions
-            std::stringstream ss;
-            ss << R"({"success": false, "error": "Python execution error: )";
-            
-            if (PyErr_Occurred()) {
-                PyObject *ptype, *pvalue, *ptraceback;
-                PyErr_Fetch(&ptype, &pvalue, &ptraceback);
-                
-                if (pvalue) {
-                    PyObject* str = PyObject_Str(pvalue);
-                    if (str) {
-                        const char* errorStr = PyUnicode_AsUTF8(str);
-                        if (errorStr) {
-                            ss << errorStr;
-                        }
-                        Py_DECREF(str);
-                    }
-                }
-                
-                if (ptype) Py_DECREF(ptype);
-                if (pvalue) Py_DECREF(pvalue);
-                if (ptraceback) Py_DECREF(ptraceback);
-            } else {
-                ss << "Unknown Python error";
-            }
-            
-            ss << R"("})";
-            lastError = ss.str();
-            PyErr_Clear();
+            std::string errorResult = handlePythonJsonError();
+            lastError = errorResult;
             PyGILState_Release(gstate);
             LOG_F(ERROR, "Python error: %s", lastError.c_str());
-            return lastError;
+            return errorResult;
             
         } catch (const std::exception& e) {
             PyGILState_Release(gstate);
             LOG_F(ERROR, "C++ exception: %s", e.what());
-            lastError = R"({"success": false, "error": "C++ exception: )" + std::string(e.what()) + R"("})";
+            lastError = createErrorJson("C++ exception: " + std::string(e.what()));
             return lastError;
         } catch (...) {
             PyGILState_Release(gstate);
             LOG_F(ERROR, "Unknown C++ exception");
-            lastError = R"({"success": false, "error": "Unknown C++ exception"})";
+            lastError = createErrorJson("Unknown C++ exception");
             return lastError;
+        }
+    }
+    
+    // Helper method to safely import a module
+    bp::object safeImportModule(const std::string& moduleName, PythonResult& result) {
+        try {
+            auto module = bp::import(moduleName.c_str());
+            LOG_F(INFO, "Module '%s' imported successfully", moduleName.c_str());
+            result.success = true;  // Set success flag on successful import
+            return module;
+        } catch (const bp::error_already_set&) {
+            result.error = "Failed to import module: " + moduleName;
+            result.success = false;
+            LOG_F(ERROR, "%s", result.error.c_str());
+            PyErr_Clear();
+            return bp::object(); // Return empty object to signal failure
+        }
+    }
+    
+    // Helper method to safely get a function from a module
+    bp::object safeGetFunction(const bp::object& module, const std::string& functionName, const std::string& moduleName, PythonResult& result) {
+        try {
+            auto function = module.attr(functionName.c_str());
+            LOG_F(INFO, "Function '%s' retrieved successfully", functionName.c_str());
+            result.success = true;  // Set success flag on successful retrieval
+            return function;
+        } catch (const bp::error_already_set&) {
+            result.error = "Function '" + functionName + "' not found in module '" + moduleName + "'";
+            result.success = false;
+            LOG_F(ERROR, "%s", result.error.c_str());
+            PyErr_Clear();
+            return bp::object(); // Return empty object to signal failure
         }
     }
     
     PythonResult executeCommand(const PythonCommand& command) {
         LOG_F(INFO, "Executing command: %s.%s", command.module.c_str(), command.function.c_str());
         
-        PythonResult result;
-        result.success = false;
-        
-        if (!initialized) {
-            result.error = "Python processor not initialized: " + lastError;
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
-        
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        
-        try {
+        return executePythonOperation<PythonResult>("executeCommand", [&]() -> PythonResult {
+            PythonResult result;
+            result.success = false;  // Initialize properly
+            LOG_F(INFO, "Lambda starting executeCommand");
+            
             // Import the module
-            bp::object module;
-            try {
-                module = bp::import(command.module.c_str());
-                LOG_F(INFO, "Module '%s' imported successfully", command.module.c_str());
-            } catch (const bp::error_already_set&) {
-                result.error = "Failed to import module: " + command.module;
-                LOG_F(ERROR, "%s", result.error.c_str());
-                PyErr_Clear();
-                PyGILState_Release(gstate);
-                return result;
-            }
+            bp::object module = safeImportModule(command.module, result);
+            LOG_F(INFO, "After safeImportModule, success=%s", result.success ? "true" : "false");
+            if (!result.success) return result; // Early return on failure
             
             // Get the function
-            bp::object function;
-            try {
-                function = module.attr(command.function.c_str());
-                LOG_F(INFO, "Function '%s' retrieved successfully", command.function.c_str());
-            } catch (const bp::error_already_set&) {
-                result.error = "Function '" + command.function + "' not found in module '" + command.module + "'";
-                LOG_F(ERROR, "%s", result.error.c_str());
-                PyErr_Clear();
-                PyGILState_Release(gstate);
-                return result;
-            }
+            bp::object function = safeGetFunction(module, command.function, command.module, result);
+            LOG_F(INFO, "After safeGetFunction, success=%s", result.success ? "true" : "false");
+            if (!result.success) return result; // Early return on failure
             
             // Convert arguments and call function or get attribute
-            bp::object pyResult;
-            try {
-                // Check if it's callable
-                if (PyCallable_Check(function.ptr())) {
-                    // It's a function, call it
-                    if (command.args.empty()) {
-                        pyResult = function();
-                    } else {
-                        // Convert std::any arguments to boost::python objects
-                        bp::list pyArgs;
-                        for (const auto& arg : command.args) {
-                            pyArgs.append(convertAnyToPython(arg));
-                        }
-                        
-                        // Call with unpacked arguments
-                        pyResult = function(*bp::tuple(pyArgs));
-                    }
-                    LOG_F(INFO, "Function executed successfully");
-                } else {
-                    // It's a constant/attribute, just return its value
-                    if (!command.args.empty()) {
-                        result.error = "Cannot call non-callable attribute '" + command.function + "' with arguments";
-                        LOG_F(ERROR, "%s", result.error.c_str());
-                        PyGILState_Release(gstate);
-                        return result;
-                    }
-                    pyResult = function;
-                    LOG_F(INFO, "Attribute '%s' retrieved successfully", command.function.c_str());
-                }
-            } catch (const bp::error_already_set&) {
-                result.error = "Error executing function: " + extractPythonError();
-                LOG_F(ERROR, "%s", result.error.c_str());
-                PyErr_Clear();
-                PyGILState_Release(gstate);
-                return result;
-            }
+            LOG_F(INFO, "About to call executeCallableOrGetAttribute");
+            bp::object pyResult = executeCallableOrGetAttribute(function, command);
+            LOG_F(INFO, "After executeCallableOrGetAttribute");
             
             // Convert result and validate type
+            LOG_F(INFO, "About to call convertPythonToResult");
             result = convertPythonToResult(pyResult, command.expectedType);
-            result.success = true;
-            lastError.clear();
-            
-            PyGILState_Release(gstate);
-            LOG_F(INFO, "Command execution completed successfully");
+            LOG_F(INFO, "After convertPythonToResult, success=%s", result.success ? "true" : "false");
             return result;
-            
-        } catch (const std::exception& e) {
-            PyGILState_Release(gstate);
-            result.error = "C++ exception: " + std::string(e.what());
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        } catch (...) {
-            PyGILState_Release(gstate);
-            result.error = "Unknown C++ exception";
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
+        });
     }
     
     PythonResult callFunction(const std::string& module, const std::string& function, 
@@ -462,199 +455,72 @@ public:
     PythonResult executeCode(const std::string& pythonCode) {
         LOG_F(INFO, "Executing Python code: %s...", pythonCode.substr(0, 100).c_str());
         
-        PythonResult result;
-        result.success = false;
-        
-        if (!initialized) {
-            result.error = "Python processor not initialized: " + lastError;
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
-        
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        
-        try {
+        return executePythonOperation<PythonResult>("executeCode", [&]() -> PythonResult {
+            PythonResult result;
+            
             // Create a fresh namespace for each execution to ensure isolation
-            bp::dict fresh_namespace;
-            bp::object builtins = bp::import("builtins");
-            fresh_namespace["__builtins__"] = builtins;
+            bp::dict fresh_namespace = NamespaceHelper::createFreshNamespace();
             
-            bp::object pyResult;
-            
-            // Try eval first (for expressions), fall back to exec (for statements)
-            try {
-                pyResult = bp::eval(pythonCode.c_str(), fresh_namespace, fresh_namespace);
-                LOG_F(INFO, "Code evaluated as expression successfully");
-            } catch (const bp::error_already_set&) {
-                PyErr_Clear(); // Clear the eval error
-                // If eval failed, try exec (returns None but executes statements)
-                pyResult = bp::exec(pythonCode.c_str(), fresh_namespace, fresh_namespace);
-                LOG_F(INFO, "Code executed as statement successfully");
-                
-                // For statements like "x = 10; x", try to get the result of the last expression
-                if (pythonCode.find(';') != std::string::npos || pythonCode.find('=') != std::string::npos) {
-                    // Extract the last part after semicolon or newline
-                    size_t lastSemicolon = pythonCode.find_last_of(';');
-                    if (lastSemicolon != std::string::npos && lastSemicolon + 1 < pythonCode.length()) {
-                        std::string lastExpr = pythonCode.substr(lastSemicolon + 1);
-                        // Trim whitespace
-                        lastExpr.erase(0, lastExpr.find_first_not_of(" \t\n\r"));
-                        lastExpr.erase(lastExpr.find_last_not_of(" \t\n\r") + 1);
-                        
-                        if (!lastExpr.empty()) {
-                            try {
-                                pyResult = bp::eval(lastExpr.c_str(), fresh_namespace, fresh_namespace);
-                                LOG_F(INFO, "Successfully evaluated last expression: %s", lastExpr.c_str());
-                            } catch (const bp::error_already_set&) {
-                                PyErr_Clear();
-                                // Keep the None result from exec
-                            }
-                        }
-                    }
-                }
-            }
+            bp::object pyResult = executeCodeWithNamespace(pythonCode, fresh_namespace);
             
             result = convertPythonToResult(pyResult, "any");
-            result.success = true;
-            lastError.clear();
-            
-            PyGILState_Release(gstate);
-            LOG_F(INFO, "Code execution completed successfully");
             return result;
-            
-        } catch (const bp::error_already_set&) {
-            result.error = "Error executing code: " + extractPythonError();
-            LOG_F(ERROR, "%s", result.error.c_str());
-            PyErr_Clear();
-            PyGILState_Release(gstate);
-            return result;
-        } catch (const std::exception& e) {
-            PyGILState_Release(gstate);
-            result.error = "C++ exception: " + std::string(e.what());
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
+        });
     }
     
     PythonResult evaluateExpression(const std::string& expression) {
         LOG_F(INFO, "Evaluating Python expression: %s...", expression.substr(0, 100).c_str());
         
-        PythonResult result;
-        result.success = false;
-        
-        if (!initialized) {
-            result.error = "Python processor not initialized: " + lastError;
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
-        
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        
-        try {
+        return executePythonOperation<PythonResult>("evaluateExpression", [&]() -> PythonResult {
+            PythonResult result;
+            
             // Create a fresh namespace for each execution to ensure isolation
-            bp::dict fresh_namespace;
-            bp::object builtins = bp::import("builtins");
-            fresh_namespace["__builtins__"] = builtins;
+            bp::dict fresh_namespace = NamespaceHelper::createFreshNamespace();
             
             bp::object pyResult = bp::eval(expression.c_str(), fresh_namespace, fresh_namespace);
             
             result = convertPythonToResult(pyResult, "any");
-            result.success = true;
-            lastError.clear();
-            
-            PyGILState_Release(gstate);
-            LOG_F(INFO, "Expression evaluation completed successfully");
             return result;
-            
-        } catch (const bp::error_already_set&) {
-            result.error = "Error evaluating expression: " + extractPythonError();
-            LOG_F(ERROR, "%s", result.error.c_str());
-            PyErr_Clear();
-            PyGILState_Release(gstate);
-            return result;
-        } catch (const std::exception& e) {
-            PyGILState_Release(gstate);
-            result.error = "C++ exception: " + std::string(e.what());
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
+        });
     }
     
     PythonResult executeStatement(const std::string& statement) {
         LOG_F(INFO, "Executing Python statement: %s...", statement.substr(0, 100).c_str());
         
-        PythonResult result;
-        result.success = false;
-        
-        if (!initialized) {
-            result.error = "Python processor not initialized: " + lastError;
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
-        
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        
-        try {
+        return executePythonOperation<PythonResult>("executeStatement", [&]() -> PythonResult {
+            PythonResult result;
+            
             // Create a fresh namespace for each execution to ensure isolation
-            bp::dict fresh_namespace;
-            bp::object builtins = bp::import("builtins");
-            fresh_namespace["__builtins__"] = builtins;
+            bp::dict fresh_namespace = NamespaceHelper::createFreshNamespace();
             
             bp::exec(statement.c_str(), fresh_namespace, fresh_namespace);
             
             // For statements, return success with None value
-            result.success = true;
             result.actualType = "NoneType";
             result.stringValue = "None";
             result.value = std::string("None");
-            lastError.clear();
-            
-            PyGILState_Release(gstate);
-            LOG_F(INFO, "Statement execution completed successfully");
             return result;
-            
-        } catch (const bp::error_already_set&) {
-            result.error = "Error executing statement: " + extractPythonError();
-            LOG_F(ERROR, "%s", result.error.c_str());
-            PyErr_Clear();
-            PyGILState_Release(gstate);
-            return result;
-        } catch (const std::exception& e) {
-            PyGILState_Release(gstate);
-            result.error = "C++ exception: " + std::string(e.what());
-            LOG_F(ERROR, "%s", result.error.c_str());
-            return result;
-        }
+        });
     }
     
     bool canImportModule(const std::string& module) {
-        if (!initialized) {
-            return false;
-        }
-        
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        
-        try {
+        return executePythonBoolOperation("canImportModule", [&]() -> bool {
             bp::import(module.c_str());
-            PyGILState_Release(gstate);
             return true;
-        } catch (const bp::error_already_set&) {
-            PyErr_Clear();
-            PyGILState_Release(gstate);
-            return false;
-        }
+        });
     }
     
     std::vector<std::string> getModuleFunctions(const std::string& module) {
         std::vector<std::string> functions;
         
         if (!initialized) {
+            LOG_F(ERROR, "getModuleFunctions failed: not initialized");
             return functions;
         }
         
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        
         try {
+            GILGuard gil;
+            
             bp::object mod = bp::import(module.c_str());
             bp::object main_module = bp::import("__main__");
             bp::object main_namespace = main_module.attr("__dict__");
@@ -678,10 +544,11 @@ public:
                 }
             }
             
-            PyGILState_Release(gstate);
         } catch (const bp::error_already_set&) {
+            LOG_F(ERROR, "Error getting module functions: %s", extractPythonError().c_str());
             PyErr_Clear();
-            PyGILState_Release(gstate);
+        } catch (...) {
+            LOG_F(ERROR, "Exception in getModuleFunctions");
         }
         
         return functions;
@@ -694,12 +561,154 @@ public:
     std::string getLastError() const {
         return lastError;
     }
-    
+
 private:
     bool initialized;
     std::string lastError;
     bp::object processorModule;
     bp::object processFunction;
+    
+    // Helper method to check initialization and return early if not initialized
+    template<typename ResultType>
+    bool checkInitialization(ResultType& result, const std::string& operation) {
+        if (!initialized) {
+            result.error = "Python processor not initialized: " + lastError;
+            LOG_F(ERROR, "Operation '%s' failed: %s", operation.c_str(), result.error.c_str());
+            result.success = false;
+            return false;
+        }
+        return true;
+    }
+    
+    // Template method for executing Python operations with common error handling
+    template<typename ResultType, typename Operation>
+    ResultType executePythonOperation(const std::string& operationName, Operation&& operation) {
+        ResultType result;
+        result.success = false;
+        
+        if (!checkInitialization(result, operationName)) {
+            return result;
+        }
+        
+        try {
+            GILGuard gil;
+            result = operation();
+            // Don't override result.success - let the operation set it
+            if (result.success) {
+                lastError.clear();
+                LOG_F(INFO, "%s completed successfully", operationName.c_str());
+            }
+        } catch (const bp::error_already_set&) {
+            result.error = "Error in " + operationName + ": " + extractPythonError();
+            LOG_F(ERROR, "%s", result.error.c_str());
+            PyErr_Clear();
+        } catch (const std::exception& e) {
+            result.error = "C++ exception in " + operationName + ": " + std::string(e.what());
+            LOG_F(ERROR, "%s", result.error.c_str());
+        } catch (...) {
+            result.error = "Unknown exception in " + operationName;
+            LOG_F(ERROR, "%s", result.error.c_str());
+        }
+        
+        return result;
+    }
+    
+    // Specialized template for boolean operations
+    template<typename Operation>
+    bool executePythonBoolOperation(const std::string& operationName, Operation&& operation) {
+        if (!initialized) {
+            LOG_F(ERROR, "Operation '%s' failed: not initialized", operationName.c_str());
+            return false;
+        }
+        
+        try {
+            GILGuard gil;
+            return operation();
+        } catch (const bp::error_already_set&) {
+            LOG_F(ERROR, "Error in %s: %s", operationName.c_str(), extractPythonError().c_str());
+            PyErr_Clear();
+            return false;
+        } catch (...) {
+            LOG_F(ERROR, "Exception in %s", operationName.c_str());
+            return false;
+        }
+    }
+    
+    // Helper method to execute callable or get attribute
+    bp::object executeCallableOrGetAttribute(const bp::object& function, const PythonCommand& command) {
+        LOG_F(INFO, "executeCallableOrGetAttribute called for function: %s", command.function.c_str());
+        LOG_F(INFO, "Function pointer valid: %s", function.ptr() ? "true" : "false");
+        
+        if (PyCallable_Check(function.ptr())) {
+            LOG_F(INFO, "Function is callable");
+            // It's a function, call it
+            if (command.args.empty()) {
+                LOG_F(INFO, "Calling function with no arguments");
+                auto result = function();
+                LOG_F(INFO, "Function executed successfully");
+                return result;
+            } else {
+                LOG_F(INFO, "Calling function with %zu arguments", command.args.size());
+                // Convert std::any arguments to boost::python objects
+                bp::list pyArgs;
+                for (const auto& arg : command.args) {
+                    pyArgs.append(convertAnyToPython(arg));
+                }
+                
+                // Call with unpacked arguments
+                auto result = function(*bp::tuple(pyArgs));
+                LOG_F(INFO, "Function executed successfully");
+                return result;
+            }
+        } else {
+            LOG_F(INFO, "Function is not callable - treating as attribute");
+            // It's a constant/attribute, just return its value
+            if (!command.args.empty()) {
+                throw std::runtime_error("Cannot call non-callable attribute '" + command.function + "' with arguments");
+            }
+            LOG_F(INFO, "Attribute '%s' retrieved successfully", command.function.c_str());
+            return function;
+        }
+    }
+    
+    // Helper method to execute code with a given namespace
+    bp::object executeCodeWithNamespace(const std::string& pythonCode, bp::dict& namespace_dict) {
+        // Try eval first (for expressions), fall back to exec (for statements)
+        try {
+            auto result = bp::eval(pythonCode.c_str(), namespace_dict, namespace_dict);
+            LOG_F(INFO, "Code evaluated as expression successfully");
+            return result;
+        } catch (const bp::error_already_set&) {
+            PyErr_Clear(); // Clear the eval error
+            // If eval failed, try exec (returns None but executes statements)
+            auto result = bp::exec(pythonCode.c_str(), namespace_dict, namespace_dict);
+            LOG_F(INFO, "Code executed as statement successfully");
+            
+            // For statements like "x = 10; x", try to get the result of the last expression
+            if (pythonCode.find(';') != std::string::npos || pythonCode.find('=') != std::string::npos) {
+                // Extract the last part after semicolon or newline
+                size_t lastSemicolon = pythonCode.find_last_of(';');
+                if (lastSemicolon != std::string::npos && lastSemicolon + 1 < pythonCode.length()) {
+                    std::string lastExpr = pythonCode.substr(lastSemicolon + 1);
+                    // Trim whitespace
+                    lastExpr.erase(0, lastExpr.find_first_not_of(" \t\n\r"));
+                    lastExpr.erase(lastExpr.find_last_not_of(" \t\n\r") + 1);
+                    
+                    if (!lastExpr.empty()) {
+                        try {
+                            auto lastResult = bp::eval(lastExpr.c_str(), namespace_dict, namespace_dict);
+                            LOG_F(INFO, "Successfully evaluated last expression: %s", lastExpr.c_str());
+                            return lastResult;
+                        } catch (const bp::error_already_set&) {
+                            PyErr_Clear();
+                            // Keep the None result from exec
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
     
     // Helper methods for type conversion
     bp::object convertAnyToPython(const std::any& value) {
@@ -726,60 +735,97 @@ private:
         }
     }
     
+    // Helper method to get Python object type name
+    std::string getPythonTypeName(const bp::object& pyObj) {
+        PyObject* type = PyObject_Type(pyObj.ptr());
+        if (!type) return "unknown";
+        
+        PyObject* typeName = PyObject_GetAttrString(type, "__name__");
+        std::string result = "unknown";
+        if (typeName) {
+            const char* name = PyUnicode_AsUTF8(typeName);
+            if (name) result = name;
+            Py_DECREF(typeName);
+        }
+        Py_DECREF(type);
+        return result;
+    }
+    
+    // Helper methods for specific type conversions
+    void convertNoneType(PythonResult& result) {
+        result.value = std::string("None");
+        result.actualType = "NoneType";
+    }
+    
+    void convertBoolType(const bp::object& pyObj, PythonResult& result) {
+        bool bool_val = PyObject_IsTrue(pyObj.ptr()) == 1;
+        result.value = bool_val;
+        result.actualType = "bool";
+        LOG_F(INFO, "Converted Python bool to C++ bool: %s", bool_val ? "true" : "false");
+    }
+    
+    void convertStringType(const bp::object& pyObj, PythonResult& result) {
+        std::string str_val = bp::extract<std::string>(pyObj);
+        result.value = str_val;
+        result.actualType = "str";
+    }
+    
+    void convertIntType(const bp::object& pyObj, PythonResult& result) {
+        int int_val = bp::extract<int>(pyObj);
+        result.value = int_val;
+        result.actualType = "int";
+    }
+    
+    void convertFloatType(const bp::object& pyObj, PythonResult& result) {
+        double double_val = bp::extract<double>(pyObj);
+        result.value = double_val;
+        result.actualType = "float";
+    }
+    
+    void convertSequenceType(const bp::object& pyObj, PythonResult& result) {
+        result.value = result.stringValue;
+        result.actualType = PyList_Check(pyObj.ptr()) ? "list" : "tuple";
+    }
+    
+    void convertDictType(const bp::object& pyObj, PythonResult& result) {
+        result.value = result.stringValue;
+        result.actualType = "dict";
+    }
+    
+    void convertGenericType(const bp::object& pyObj, PythonResult& result) {
+        result.value = result.stringValue;
+        result.actualType = "object";
+    }
+    
     PythonResult convertPythonToResult(const bp::object& pyObj, const std::string& expectedType) {
         PythonResult result;
         result.success = true;
         
         try {
-            // Get string representation
+            // Get string representation first
             result.stringValue = bp::extract<std::string>(bp::str(pyObj));
             
-            // Determine actual type
-            PyObject* type = PyObject_Type(pyObj.ptr());
-            if (type) {
-                PyObject* typeName = PyObject_GetAttrString(type, "__name__");
-                if (typeName) {
-                    result.actualType = PyUnicode_AsUTF8(typeName);
-                    Py_DECREF(typeName);
-                }
-                Py_DECREF(type);
-            }
+            // Determine and set actual type
+            result.actualType = getPythonTypeName(pyObj);
             
             // Convert to appropriate C++ type based on Python type
             if (pyObj.ptr() == Py_None) {
-                // Handle None values
-                result.value = std::string("None");
-                if (result.actualType.empty()) result.actualType = "NoneType";
+                convertNoneType(result);
             } else if (PyBool_Check(pyObj.ptr())) {
                 // Handle Python booleans first (before integers, since bool is a subclass of int in Python)
-                bool bool_val = PyObject_IsTrue(pyObj.ptr()) == 1;
-                result.value = bool_val;
-                if (result.actualType.empty()) result.actualType = "bool";
-                LOG_F(INFO, "Converted Python bool to C++ bool: %s", bool_val ? "true" : "false");
+                convertBoolType(pyObj, result);
             } else if (PyUnicode_Check(pyObj.ptr())) {
-                std::string str_val = bp::extract<std::string>(pyObj);
-                result.value = str_val;
-                if (result.actualType.empty()) result.actualType = "str";
+                convertStringType(pyObj, result);
             } else if (PyLong_Check(pyObj.ptr())) {
-                int int_val = bp::extract<int>(pyObj);
-                result.value = int_val;
-                if (result.actualType.empty()) result.actualType = "int";
+                convertIntType(pyObj, result);
             } else if (PyFloat_Check(pyObj.ptr())) {
-                double double_val = bp::extract<double>(pyObj);
-                result.value = double_val;
-                if (result.actualType.empty()) result.actualType = "float";
+                convertFloatType(pyObj, result);
             } else if (PyList_Check(pyObj.ptr()) || PyTuple_Check(pyObj.ptr())) {
-                // For lists/tuples, store the string representation
-                result.value = result.stringValue;
-                if (result.actualType.empty()) result.actualType = PyList_Check(pyObj.ptr()) ? "list" : "tuple";
+                convertSequenceType(pyObj, result);
             } else if (PyDict_Check(pyObj.ptr())) {
-                // For dictionaries, store the string representation
-                result.value = result.stringValue;
-                if (result.actualType.empty()) result.actualType = "dict";
+                convertDictType(pyObj, result);
             } else {
-                // For other types, store the string representation
-                result.value = result.stringValue;
-                if (result.actualType.empty()) result.actualType = "object";
+                convertGenericType(pyObj, result);
             }
             
         } catch (const bp::error_already_set&) {
@@ -794,6 +840,37 @@ private:
         return result;
     }
     
+    // Helper methods for Python error extraction
+    std::string getExceptionTypeName(PyObject* ptype) {
+        if (!ptype) return "";
+        
+        PyObject* typeNameObj = PyObject_GetAttrString(ptype, "__name__");
+        if (!typeNameObj) return "";
+        
+        const char* typeName = PyUnicode_AsUTF8(typeNameObj);
+        std::string result = typeName ? std::string(typeName) + ": " : "";
+        Py_DECREF(typeNameObj);
+        return result;
+    }
+    
+    std::string getExceptionMessage(PyObject* pvalue) {
+        if (!pvalue) return "";
+        
+        PyObject* str = PyObject_Str(pvalue);
+        if (!str) return "";
+        
+        const char* errorStr = PyUnicode_AsUTF8(str);
+        std::string result = errorStr ? errorStr : "";
+        Py_DECREF(str);
+        return result;
+    }
+    
+    void cleanupErrorObjects(PyObject* ptype, PyObject* pvalue, PyObject* ptraceback) {
+        if (ptype) Py_DECREF(ptype);
+        if (pvalue) Py_DECREF(pvalue);
+        if (ptraceback) Py_DECREF(ptraceback);
+    }
+    
     std::string extractPythonError() {
         if (!PyErr_Occurred()) {
             return "Unknown Python error";
@@ -802,36 +879,13 @@ private:
         PyObject *ptype, *pvalue, *ptraceback;
         PyErr_Fetch(&ptype, &pvalue, &ptraceback);
         
-        std::string error = "Python error";
+        std::string error = getExceptionTypeName(ptype) + getExceptionMessage(pvalue);
         
-        // Get exception type name
-        if (ptype) {
-            PyObject* typeNameObj = PyObject_GetAttrString(ptype, "__name__");
-            if (typeNameObj) {
-                const char* typeName = PyUnicode_AsUTF8(typeNameObj);
-                if (typeName) {
-                    error = std::string(typeName) + ": ";
-                }
-                Py_DECREF(typeNameObj);
-            }
+        if (error.empty()) {
+            error = "Python error";
         }
         
-        // Get exception message
-        if (pvalue) {
-            PyObject* str = PyObject_Str(pvalue);
-            if (str) {
-                const char* errorStr = PyUnicode_AsUTF8(str);
-                if (errorStr) {
-                    error += errorStr;
-                }
-                Py_DECREF(str);
-            }
-        }
-        
-        if (ptype) Py_DECREF(ptype);
-        if (pvalue) Py_DECREF(pvalue);
-        if (ptraceback) Py_DECREF(ptraceback);
-        
+        cleanupErrorObjects(ptype, pvalue, ptraceback);
         return error;
     }
 };
