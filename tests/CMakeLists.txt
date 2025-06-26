@@ -24,6 +24,10 @@ add_executable(tests
     test_formatting.cpp
     test_stuff.cpp
     test_python_processor.cpp
+    test_generic_commands.cpp
+    test_python_processor_extended.cpp
+    test_comprehensive_python.cpp
+    test_circular_references.cpp
 )
 
 # Link libraries

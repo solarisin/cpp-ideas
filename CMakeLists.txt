@@ -146,12 +146,33 @@ target_link_libraries(${PROJECT_NAME}
         Qt::Widgets
 )
 
+# Create demo executable for generic commands
+add_executable(demo_generic_commands
+    src/demo_generic_commands.cpp
+)
+
+target_compile_options(demo_generic_commands PRIVATE -Werror)
+
+target_link_libraries(demo_generic_commands
+    INTERFACE ${PROJECT_OPTS}
+    PRIVATE
+        python_processor_lib
+)
+
 # Set target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD ${CMAKE_CXX_STANDARD}
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
     ENABLE_EXPORTS ON # Ensure Python symbols are exported for dynamic loading of extension modules
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+set_target_properties(demo_generic_commands PROPERTIES
+    CXX_STANDARD ${CMAKE_CXX_STANDARD}
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    ENABLE_EXPORTS ON
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
