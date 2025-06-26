@@ -5,17 +5,9 @@
   "description": "cpp-ideas",
   "dependencies": [
     "fmt",
-    {
-      "name": "python3",
-      "features": ["extensions"]
-    },
     "nlohmann-json",
-    "qtbase",
-    "qcoro",
-    "benchmark",
     "argparse",
     "catch2",
-    "loguru",
-    "boost-python"
+    "loguru"
   ]
 }

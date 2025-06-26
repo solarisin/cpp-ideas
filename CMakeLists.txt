@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 
 # Set project name and version
 project(
-    CppIdeas
+    cppideas
     VERSION 1.0.0
     DESCRIPTION "C++ Ideas and Experiments"
     LANGUAGES CXX
@@ -76,87 +76,23 @@ find_package(PkgConfig REQUIRED)
 # vcpkg integration
 if(DEFINED ENV{VCPKG_ROOT})
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+    if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+        set(CPPIDEAS_DEPS_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+    else()
+        message(FATAL_ERROR "VCPKG_INSTALLED_DIR or VCPKG_TARGET_TRIPLET is not defined. Please set them in your environment.")
+    endif()
+else()
+    message(WARNING "VCPKG_ROOT environment variable is not set. Using system packages.")
 endif()
 
 # Find required packages
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-find_package(Boost REQUIRED COMPONENTS python312)
 find_package(loguru CONFIG REQUIRED)
-
-# Qt6 setup
-find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
-# Include directories
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${Python3_INCLUDE_DIRS}
-)
-
-# Create python processor library
-add_library(python_processor_lib
-    src/python_processor.cpp
-)
-
-if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-    set(CPPIDEAS_DEPS_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-    target_compile_definitions(python_processor_lib
-        PRIVATE
-            CPPIDEAS_DEPS_DIR="${CPPIDEAS_DEPS_DIR}"
-    )
-endif()
-
-target_link_libraries(python_processor_lib
-    INTERFACE ${PROJECT_OPTS}
-    PUBLIC
-        fmt::fmt
-        nlohmann_json::nlohmann_json
-        Python3::Python
-        Boost::python312
-        loguru::loguru
-)
-
-target_include_directories(python_processor_lib
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${Python3_INCLUDE_DIRS}
-)
 
 # Create main executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    src/mainwindow.cpp
-)
-
-#target-specific compile options
-target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
-
-# Link libraries
-target_link_libraries(${PROJECT_NAME}
-    INTERFACE ${PROJECT_OPTS}
-    PRIVATE
-        python_processor_lib
-        Qt::Core
-        Qt::Widgets
-)
-
-# Create demo executable for generic commands
-add_executable(demo_generic_commands
-    src/demo_generic_commands.cpp
-)
-
-target_compile_options(demo_generic_commands PRIVATE -Werror)
-
-target_link_libraries(demo_generic_commands
-    INTERFACE ${PROJECT_OPTS}
-    PRIVATE
-        python_processor_lib
 )
 
 # Set target properties
@@ -168,12 +104,22 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
-set_target_properties(demo_generic_commands PROPERTIES
-    CXX_STANDARD ${CMAKE_CXX_STANDARD}
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF
-    ENABLE_EXPORTS ON
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+#target-specific compile options
+target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# Link libraries
+target_link_libraries(${PROJECT_NAME}
+    INTERFACE ${PROJECT_OPTS}
+    PRIVATE
+        fmt::fmt
+        nlohmann_json::nlohmann_json
+        loguru::loguru
 )
 
 # Enable testing

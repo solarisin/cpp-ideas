@@ -17,17 +17,12 @@ endif()
 
 find_package(loguru CONFIG REQUIRED)
 
+# Gather test sources
+file(GLOB tests_SRCS *.cpp)
+
 # Create test executable
 add_executable(tests
-    test_main.cpp
-    test_json.cpp
-    test_formatting.cpp
-    test_stuff.cpp
-    test_python_processor.cpp
-    test_generic_commands.cpp
-    test_python_processor_extended.cpp
-    test_comprehensive_python.cpp
-    test_circular_references.cpp
+    ${tests_SRCS}
 )
 
 # Link libraries
@@ -36,9 +31,7 @@ target_link_libraries(tests
         Catch2::Catch2WithMain
         fmt::fmt
         nlohmann_json::nlohmann_json
-        Qt::Core
         loguru::loguru
-        python_processor_lib
 )
 
 # Include test discovery
