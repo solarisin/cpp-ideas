@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.28)
 
 # Set project name and version
 project(
@@ -72,6 +72,7 @@ endif()
 
 # Find packages
 find_package(PkgConfig REQUIRED)
+find_package(OpenGL REQUIRED)
 
 # vcpkg integration
 if(DEFINED ENV{VCPKG_ROOT})
@@ -93,6 +94,10 @@ find_package(loguru CONFIG REQUIRED)
 # Create main executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
+    src/tictactoe.cpp
+    src/simple_nn.cpp
+    src/nn_tictactoe_player.cpp
+    src/random_utils.cpp
 )
 
 # Set target properties
@@ -122,6 +127,72 @@ target_link_libraries(${PROJECT_NAME}
         loguru::loguru
 )
 
+# Create Tic Tac Toe neural network executable
+add_executable(tictactoe_nn
+    src/main.cpp
+    src/tictactoe.cpp
+    src/simple_nn.cpp
+    src/nn_tictactoe_player.cpp
+    src/random_utils.cpp
+)
+
+#target-specific compile options
+target_compile_options(tictactoe_nn PRIVATE -Werror)
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(tictactoe_nn
+    INTERFACE ${PROJECT_OPTS}
+    PRIVATE
+        fmt::fmt
+        nlohmann_json::nlohmann_json
+        loguru::loguru
+)
+
+# ImGui GUI executable
+add_executable(tictactoe_nn_imgui
+    src/main_imgui.cpp
+    src/tictactoe.cpp
+    src/simple_nn.cpp
+    src/nn_tictactoe_player.cpp
+    src/random_utils.cpp
+    src/imgui_impl_glfw.cpp
+    src/imgui_impl_opengl3.cpp
+)
+
+set_target_properties(tictactoe_nn_imgui PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+target_compile_options(tictactoe_nn_imgui PRIVATE -Werror)
+
+target_include_directories(tictactoe_nn_imgui PRIVATE
+    ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/imgui
+    ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/imgui/backends
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_directories(tictactoe_nn_imgui PRIVATE
+    ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib
+    ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib
+)
+
+target_link_libraries(tictactoe_nn_imgui
+    INTERFACE ${PROJECT_OPTS}
+    PRIVATE
+        fmt::fmt
+        nlohmann_json::nlohmann_json
+        loguru::loguru
+        imgui
+        glfw
+        OpenGL::GL
+)
+
 # Enable testing
 enable_testing()
 
@@ -129,7 +200,7 @@ enable_testing()
 add_subdirectory(tests)
 
 # Installation rules
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} tictactoe_nn tictactoe_nn_imgui
     RUNTIME DESTINATION bin
 )
 

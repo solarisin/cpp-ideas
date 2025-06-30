@@ -43,7 +43,6 @@
       "installOhMyZsh": false,
       "installOhMyZshConfig": false
     },
-    "ghcr.io/devcontainers-extra/features/cmake": {},
     "ghcr.io/devcontainers/features/git:1": {
       "ppa": true,
       "version": "latest"
